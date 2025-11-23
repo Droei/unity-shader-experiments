@@ -11,7 +11,14 @@ Branches can include shaders from tutorials or my own creations. The goal of thi
 
 ---
 
-## Dissolve effect!
+## Branch Information
+Each experiment branch should include a clear description of what it contains and how it works. 
+This is mostly for myself as I memorize and understand subject through explaining them but also me and potential others to refer back to.
 
-Followed tutorial but adjusted parts to work with my usecase as the tutorial was for 2D and some equasions just didn't work for me:
-https://www.youtube.com/watch?v=HYWaU97-UC4
+---
+
+## Notes
+
+- Always branch off `main` for new experiments.  
+- Keep `main` clean and minimal; different reuseable resources can always be added ofcorse.  
+- Name branches clearly and consistently to make them easy to navigate, a creation index is also important.
