@@ -15,6 +15,7 @@ Branches can include shaders from tutorials or my own creations. The goal of thi
 Each experiment branch should include a clear description of what it contains and how it works. 
 This is mostly for myself as I memorize and understand subject through explaining them but also me and potential others to refer back to.
 
+Its important to note that I don't aim to just understand the note itself but what goes on under, the math behind the nodes are essential to me as I have goals beyond making nice shaders!
 ---
 
 ## Notes
