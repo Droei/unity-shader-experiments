@@ -7,7 +7,7 @@ This repository contains **Unity Shader Graph experiments**.
 - **Main branch**: a clean template with minimal setup for testing shaders.  
 - **Experiment branches**: individual shader projects based on the main branch.  
 
-Branches can include shaders from tutorials or my own creations. The goal of this repository is to **document my experiments and track your learning progress**.
+Branches can include shaders from tutorials or my own creations. The goal of this repository is to **document my experiments and track my learning progress**.
 
 ---
 
