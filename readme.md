@@ -11,15 +11,11 @@ Branches can include shaders from tutorials or my own creations. The goal of thi
 
 ---
 
-## Branch Information
-Each experiment branch should include a clear description of what it contains and how it works. 
-This is mostly for myself as I memorize and understand subject through explaining them but also me and potential others to refer back to.
+## Foreword
 
-Its important to note that I don't aim to just understand the note itself but what goes on under, the math behind the nodes are essential to me as I have goals beyond making nice shaders!
----
+Source: https://www.youtube.com/watch?v=pFQ2-HFG_hY
 
-## Notes
+This is gonna be a big one but honestly its such a golden source of info involving many interesting steps, new nodes and even HLSL!!!!
+I'm both devastated and super excited to disect this lava shader!!!!
 
-- Always branch off `main` for new experiments.  
-- Keep `main` clean and minimal; different reuseable resources can always be added ofcorse.  
-- Name branches clearly and consistently to make them easy to navigate, a creation index is also important.
+![Lava shader](images/1-lava-shader.png)
