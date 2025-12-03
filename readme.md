@@ -66,7 +66,22 @@ Haha it's not done yet, but almost! So we have our points and the unique data it
 
 ![Lava shader](images/9-perlin-noise-grid.png)
 
-Vornoi is a little different! Lets see how it works! First of all Vornoi does not take an angle to create gradients like Perlin noise does!
+Vornoi is a little different! Lets see how it works! First of all Vornoi does not take an angle to create gradients like Perlin noise does! First of all Vornoi has no gradient stored or generated anywhere unline Perlin noise! Instead Vornoi noise is purely built up out of feature points (those random points) and distances between your sample point and feature point. So just to clearify a sample point is literally just any value where you want to know the value of the noise. For example noise(x, y) returns 1 random value of the noise on that position, the x,y is the sample point. The feature point on the other hand are those random dots that appear. So what do they do how do they relate? SOOOOOOOOOOOOOOOOOO I'm gonna cook this one up in photoshop so I can visualise it! Nvm I'll use Illustrator.
+
+![Lava shader](images/10-vornoi-explanation.png)
+
+Anyway SO HERE YOU HAVE VORNOI NOISE!!!! This is what you get:
+- Feature points: Each grid got a random feature point, this is just 1 pixel/point on in each grid!
+- Sample points: Every pixel that is being evaluated so basically just a position that's being inputted in the vornoi (as you can see vornoi noise is not that gradient like stuff you would expect yet)
+- Dinstances: every distance between your sample point and all feature points
+- Vornoi value: this is the distance from the sample point to the closest feature point, usually that's the one that the grid is in but it's definitly not uncommon for a sample point to have a feature point in another grid!
+
+So **this is vornoi noise** no gradients or polygons or anything this is what we get, but with this data we can make all those fancy sell things we want to make! So what really happens, we have all this data, how do we make a little sharp blob? First we get the closest feature point, it'll check all 9 grid cells around the sample points and collecdt the distances, then we get the minimum distance! 
+
+Alright I basically completely got lost for a bit. In my previous example I had 1 sample point to calculate, but this actually happens for every coordinate in a grid, meaning if each grid has 100 coordinates there will be 99 sample points and 1 feature points! each coordinate will see its distance to its closest feature point and will be assigned a number, furthest away will receive a 1 while closest by will be 0, that's ofcorse why everything starts as a black perfect circle and as you go further away it'll change in our cell like structures because then other feature points will start being closer meaning the sample points will start looking at them for distance! and that's how we get those vornoi tiles! So we will manually assign a max radius so basically if we set the max of .5 if we keep increasing away from the feature point we can clamp everything to 1 over .5 so we will have our gradient and everything beyond the value of .5 will clamp to 1 giving us a fixed radius. Another way to have it be black at the start and white at the edge is by doing `currentFeaturePoint/closestFeaturePoint` this value we can then use to find the outer most value we can then do `sampleValue = normalise(distanceFromClosestFeaturePoint, currentFeaturePoint/closestFeaturePoint)` this way instead of just basing the sample points value on the distance between it and the feature point closest it'll always normalise its value between 0 and 1 meaning the furthest possible distance away will always be 1 (even if its maybe 0.75 or smth) and closest will always be 0!!! I don't know how clear it is but it is to me now!
+
+Now Imma hit the gym... I ate soo much sugar to get through this one omfg, I'm soo happy I understand it now but this stuff was way more complex than I thought, but now I have all the tools to disect the next code!!!!
+
 
 
 Its very cool to see, when I set out on this journey I started with Inigo Quilez's articles but I ofcorse didn't really understand anything really or more like: I couldn't place his insight anywhere to make procedurally generated worlds... But now I'm quite a bit further in my journey and I see exacly why its sooo relevant, its such an amazing step forward to finally come back here and built more relevant understandings!
