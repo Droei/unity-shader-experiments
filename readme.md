@@ -195,3 +195,5 @@ We then bash this back in our previous sin but this time our values are actually
 ![Working random positions](images/17-working-balls.png)
 
 Now time for bed, I have a physical board game to pitch tomorrow! (Honestly I never thought I'd enjoy making physical games but honestly my teachers passion is really captivating and I started really to appreciate it like an artform, I always grind sooo hard to built my technical foundation but making a physical game is just all about the idea without all the headacackes of trying to rewrite a Vornoi and stuff, its been a great journey so far becoming a game designer!)
+
+PS. frac makes all values positive so a sine goes in a circle between -1 and 1 but frac makes everything under 0 -> 1 so that's why we only get positive values in out hash2
