@@ -82,11 +82,10 @@ Alright I basically completely got lost for a bit. In my previous example I had 
 
 Now Imma hit the gym... I ate soo much sugar to get through this one omfg, I'm soo happy I understand it now but this stuff was way more complex than I thought, but now I have all the tools to disect the next code!!!!
 
-
-
 Its very cool to see, when I set out on this journey I started with Inigo Quilez's articles but I ofcorse didn't really understand anything really or more like: I couldn't place his insight anywhere to make procedurally generated worlds... But now I'm quite a bit further in my journey and I see exacly why its sooo relevant, its such an amazing step forward to finally come back here and built more relevant understandings!
 
-
+Alright now I'm very excited to finally get to disecting the code!!!
+But honestly I prefer to not just take the code and go over each line, instead I will try to  write my own Vornoi HLSL code! Here we go!!!
 
 
 ```hlsl
@@ -139,3 +138,60 @@ void CustomVoronoi_float(float2 UV, float AngleOffset, float CellDensity, out fl
     }
 }
 ```
+
+So here we go this is where we are for now!
+Seems like you always need to add _float on the back and for example doing out float2 and setting name to _float2 does not work but hey at least we seeing light in the graph editor!
+```hlsl
+void DoVornoi_float(float2 UV, out float test)
+{
+    test = 1.0;
+}
+
+```
+
+![Own Vornoi 1](images/11-doVornoi-1.png)
+
+So what do we have right now, we sent in an uv (our grid btw, this is where we will draw dots in) and test for out. I don't know how I can out anything else but I believe float will be fine and I'll figure out other outputs when its relevant! So now guess I'll try to disect from the above code what places random dots on the grid. So I'm currently reading up on Inigo Quilez on SmoothVornoi, I feel like it'll be a good place to start. The above code is also looking to introduce egdes etc but honestly I don't want to bother with that, when trying to learn it is important to not go to fast, you can achieve more by aiming to: ONLY HAVE DOTS (Feature points) over anything!
+
+![Own Vornoi 1](images/12-lets-cook.gif)
+
+First we want a random number generator! So throughout my shader journey I've seen some cool ways of generating pseudo random values so the basic concept is that you squash a sine wave on top of eachother so hard it returns seemingly random values as there will be points spawned all over the place! This is a great source: https://thebookofshaders.com/10/
+
+![Random](images/13-pseudo-random.png)
+![Random](images/14-pseudo-random.png)
+
+Now this example is only in one dimension so guess what? Yeah ofcorse we are not getting at all what we wanted! (I have some other code down already to visualise this well, I already set up a very basic grid that shows the dots in a vornoi way. Ikr, couldn't believe my eyes that I'm actually going forward with this lmfao.
+
+```hlsl
+	float2 hash2(float2 p)
+	{
+		return frac(sin(p) * 10000.0);
+	}
+```
+
+![Random](images/15-pseudo-random-result.png)
+
+So now we need to make this fancy thing work with 2D values. For this the dot() function will be doing some heavy damn lifting. So first of all, what does Dot() do? Well very simple actually it multiplies each component and then adds them. So basically if we have: `dot( float2(x, y), float2(A, B) )` it'll do `x * A + y * B` simple enough right? Basic math. But ofcorse we are working with a grid so ofcorse x,y will be different, if our uv grid is 12 it'll for each grid position get the dot product ofcorse. So when we feed the values of these completely messed up lines in a sine we will get some kind of tv noise. Because once again its not just being messed up up and down but also left and right as we gave both sides a big messy bunch of values!
+
+![Random](images/16-tv-noise.png)
+
+So now to put in into hlsl, is almost the same as the GLSL above! We first do the float2 multiplication (in GLSL you can just multiplay a vec2 with vec2 in HLSL they need to be split up). So we use some seemingly random numbers to multiply our grid pos with! I had MrGPT choose them for me but basically to prevent any weirdness MrGPT made sure they:
+- Are not multiplies of eachother
+- Are not small
+- Avoid obvious patterns (Making sure they don't line up in any obvious way)
+- Make sure the dot products are far apart
+
+```hlsl
+	float2 hash2(float2 p)
+	{
+		p = float2(dot(p, float2(127.1, 311.7)),
+				   dot(p, float2(269.5, 183.3)));
+		return frac(sin(p)*100000.0);
+	}
+```
+
+We then bash this back in our previous sin but this time our values are actually already mixed up before they get jittered the shit out of them creating our beautifull random dot positions!
+
+![Working random positions](images/17-working-balls.png)
+
+Now time for bed, I have a physical board game to pitch tomorrow! (Honestly I never thought I'd enjoy making physical games but honestly my teachers passion is really captivating and I started really to appreciate it like an artform, I always grind sooo hard to built my technical foundation but making a physical game is just all about the idea without all the headacackes of trying to rewrite a Vornoi and stuff, its been a great journey so far becoming a game designer!)
