@@ -197,3 +197,60 @@ We then bash this back in our previous sin but this time our values are actually
 Now time for bed, I have a physical board game to pitch tomorrow! (Honestly I never thought I'd enjoy making physical games but honestly my teachers passion is really captivating and I started really to appreciate it like an artform, I always grind sooo hard to built my technical foundation but making a physical game is just all about the idea without all the headacackes of trying to rewrite a Vornoi and stuff, its been a great journey so far becoming a game designer!)
 
 PS. frac makes all values positive so a sine goes in a circle between -1 and 1 but frac makes everything under 0 -> positive so that's why we only get positive values in out hash2
+
+Ooh god its been over a month since I worked on this page.... I was very busy with deadlines and other things, getting back to this one will be so rough. Gonna reread the previous stuff but omfg I really hope I kept it clear!
+Honestly... Damn I remembered most still before we got to the code and the actual code after a lil refresher came out pretty neatly!
+
+But now this generates random numbers but ofcorse there's no way that this just gets us balls in squares right? So why does that happen, well to visualise I added some more code already so now I should probably dive into these first before moving forward!
+
+first of all we need to make this into a grid! The book of shaders ofcorse got us covered: https://thebookofshaders.com/09/ !
+
+So first we take our uv, this is basically like the canvas we draw upon.
+![uv](images/18-uv.png)
+
+If we where to just use that we would just have one big square and ofcorse only space for 1 blob to appear!
+![uv](images/19-uv-1.png)
+if we multiply it by 2 and floor it back aka wrap it around we get 4!
+![uv](images/20-uv-2.png)
+
+So In code that would look like this:
+```hlsl
+    float scale = 2.0;
+    float2 gridUV = UV * scale;
+    float2 cell = floor(gridUV);
+```
+Interesting to note is that ofc a gridUV is a vector 2 so it has x and y values but in HLSL you can multiply float2 by float multiplying both x and y by the float.
+So I want to recreate this with nodes so we can visualise what is happening!
+First.... Can I also do the same multiplication trick in the shader graph???
+
+Well so far nope! its just black!
+![black](images/21-black.png)
+HUH WHY TF DOES IT WORK NOW? HAHAHAHHAHAHA
+![WORKS](images/22-WORKS.png)
+But still what I am supposed to get is squares with these colors not a line.... Hmmmmm
+Ooh its because because I'm a morron!!! I accidentally put it into float making the uv one dimensional HAHAHAHAHHAA.
+
+But ooh my god now it gets super weird!
+So the working code uses floor to give me the intended result of the balls but for some reason fraction (As shown in the book of shaders) shows the result I'm actually looking for???????
+![WORKS](images/23-huh.png)
+Broo hahahaha Alright time to deepdive floor and faction man HAHAHAHAHHAHAHAHAH
+
+Alright first of all what do they do, I think I've gone over this a while back but I forgot so here we go!
+Floor is pretty straightforward, everything past the comma gets yeeted out 0 = 0, 0.8 = 0, 1 = 1 and 1.6 = 1 . Straightforward enough so why do I get that stuff with the big square?
+Well its not that deep honestly! An uv is values between (0,0) and (1,1) meaning that everything under 1 even if its .9999999 will be 0 giving a big black box!
+![WORKS](images/24-floored-UV.png)
+So now what if we multiply it by 2? 
+![WORKS](images/25-times2.png)
+Well now we got evenly spread squares but honestly it also makes sense! Now we have a value between 0 and 2 everything over 1 becomes 1 everything under becomes 0. So why the different colors? Well uv is just a vector2 that has its area normalised to a value between 0 and 1. These vector2 values are depicted with RGB colors with X representing Red and Y representing green so ofcorse going up means it'll be green or nothing and sideways red or nothing and once you go over 1 in both x and y it gets combined into yellow! So that makes sense... Nice!
+
+So what about Fraction because that is the sensible thing here! Actually not I already did dive deep into fract and it still kinda does not make sense to me! Well here we go!
+So fract basically loops access numbers back I believe 
+![WORKS](images/26-fract.png)
+
+Alright so quick before bed! I was laying with my girlfriend in bed processing todays work and I was thinking about fract and it finally daunted on me it now makes sense to me!!!
+No image that's for tomorrow just typing! So imagine we are doing a multiply times2! Floor takes everything past the . away but fract will take everything before the . away!
+So what does this mean for our uv. If we have our coordinates from 0 to 2 it will take every coordinate from 0 to 2 and assign it a value. So if we do nothing it basically looks like nothing has happened at all the uv looks the same! When we floor it it basically cuts it in 4 diff squares why we explained earlier but with fract we will get 4 suares that look exactly like the initial uv? why
+WELLLLLL we are not looking at the initial number in front of the dot so once we go past 1 we start at 0 again zo at coordinate y0 x0.5 and y0 x1.5 we will both have the value x 0.5 because the number before the . will always be 0!!!! OMG I LOVE YOU FEMKE, her cuddles always make me get comfortable giving my brain space to breath and process any lingering thoughts in the background!
+
+
+
