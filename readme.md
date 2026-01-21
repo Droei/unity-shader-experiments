@@ -251,6 +251,152 @@ Alright so quick before bed! I was laying with my girlfriend in bed processing t
 No image that's for tomorrow just typing! So imagine we are doing a multiply times2! Floor takes everything past the . away but fract will take everything before the . away!
 So what does this mean for our uv. If we have our coordinates from 0 to 2 it will take every coordinate from 0 to 2 and assign it a value. So if we do nothing it basically looks like nothing has happened at all the uv looks the same! When we floor it it basically cuts it in 4 diff squares why we explained earlier but with fract we will get 4 suares that look exactly like the initial uv? why
 WELLLLLL we are not looking at the initial number in front of the dot so once we go past 1 we start at 0 again zo at coordinate y0 x0.5 and y0 x1.5 we will both have the value x 0.5 because the number before the . will always be 0!!!! OMG I LOVE YOU FEMKE, her cuddles always make me get comfortable giving my brain space to breath and process any lingering thoughts in the background!
+![WORKS](images/27-fract-2.png)
+
+Alright we are back! so we now made sense of what floor and fract do, so now its time to figure out why tf the code uses floor!
+So normally if I remove this code:
+
+```hlsl
+    float scale = 2.0;
+    float2 gridUV = UV * scale;
+    float2 cell = floor(gridUV);
+```
+
+and instead put in the uv that I fractioned myself and then place a random number each I should get the same result right? 
+Well lets see!
+Our code right now: 
+
+```
+float2 hash2(float2 p)
+{
+    p = float2(dot(p, float2(127.1, 311.7)),
+               dot(p, float2(269.5, 183.3)));
+    return frac(sin(p)*100000.0);
+}
+
+void DoVornoi_float(float2 UV, out float test)
+{
+    float2 featurePoint = hash2(UV);
+    float2 featureUV = (cell + featurePoint) / scale;
+
+    float dist = distance(UV, featureUV);
+
+    test = saturate(1.0 - dist * 20.0);
+}
+```
+
+(the code on the bottom that wasn't mentioned yet is to visualise the dots)
+
+Aaannndd we basically get static noise: 
+![WORKS](images/28-noise.png)
+
+
+So I was curious what would each uv output if I try to set my featurepoints:
+![WORKS](images/29-nothing.png)
+Looks like there is nothing sensible so far! But why because aren't we literally doing this?
+```hlsl
+    float scale = 7.0;
+    float2 gridUV = UV * scale;
+    float2 cell = floor(gridUV);
+```
+
+Ooh first of all because I'm a morron and I had gridUV still in instead of UV, its still not as intended but this helps haha
+![WORKS](images/30-something.png)
+
+I needed a break yesterday but hey back to work, this is a lot to grasp today!
+This I have not done yet but I feel like I have to, for now Imma say "fuck it" on why the uv doesn't work from the graph editor, I only have so much time and way to much work to go! so it's time to get back to focussing on code!
+
+But one thing to call out, once we go back to normal code I do get a somewhat sensible result worth noting!
+![WORKS](images/31.png)
+
+Anyway lets disect the code because that was my goal in the first place, just a reminder what we have:
+
+```
+float2 hash2(float2 p)
+{
+    p = float2(dot(p, float2(127.1, 311.7)),
+               dot(p, float2(269.5, 183.3)));
+    return frac(sin(p)*100000.0);
+}
+
+void DoVornoi_float(float2 UV, out float test)
+{
+    float scale = 7.0;
+
+    float2 gridUV = UV * scale;
+
+    float2 cell = floor(gridUV);
+
+    float2 featurePoint = hash2(cell);
+    float2 featureUV = (cell + featurePoint) / scale;
+
+    float dist = distance(UV, featureUV);
+
+    test = saturate(1.0 - dist * 20.0);
+}
+```
+
+So we have the scale and how we add it that makes enough sense, what to me is curious is why its using floor instead of fract...
+Just for reference when I replace floor with frac:
+![WORKS](images/32.png)
+Looks like there's just a lot of dots appearing on 1/14th of the grid.
+
+Well lets break down why we use floor, first of all what does Voronoi need conceptually for us to make our own?
+- A divided space in a grid of cells (Well it can be without but it helps a ton with processing and logic to do it with a grid)
+- feature points, we'll also put them in the grid
+- and for each pixel that isn't a feature point it needs a distance to its closest 
+
+ooooooooooooooooooooooh alright I see ya now
+so what des floor do chat? it ofc cuts all the stuff away after the . and frac cuts all in front. When we worked with the uv we use frac cuz every location has a value and what the value is will be determined with frac
+So why is this not the case in our code, well there is a detail that got completely lost on me so far! An UV is a vector for giving you RGBA meanwhile in our code the UV is sent in as a float2 aka a vector2 meaning it only has RG, and those RG values are now cut in: 1 2 3 4 5 so when we do fract on it everything gets condensed in the 1 [0,0] [1,1] range while with floor everything becomes an int representing different coordinates on the UV!
+
+OOOH ALMOST, so UV don't do RGBA but texture coordinates! U and V! So basically it holds coordinates and those cord are often represented in colors: 
+
+Anyway so! To finish up my confusion with Floor and Frac I can finally set a solid conclusion!
+- Frac always repeated the same stuff over cells, this means.... Well that frac is great for repeating patterns!
+- Floor divides everything in identifyable positions making it great for vornoi if we want everything around our grid we can just check [0,0] everything 1 over and under x and Y, EASY!!!
+
+Alright so we got this all figured out!
+```
+    float scale = 7.0;
+    float2 gridUV = UV * scale;
+    float2 cell = floor(gridUV);
+```
+
+I did decide to remove the saturate part: `test = saturate(1.0 - dist * 20.0);` what it basically does is first of all clamp it. 
+Basically what it does is that it cuts off everything above 1 and 0. We multiplied it by 20 increasing the value before we saturate it. So when something has the value 0.05 it goes \*20 becoming 1 and being white and ofcorse if we had 0.04 it would become 0.8 having some whiteness. This makes it so we have a ball with a small cutoff, decreasing the 20 make it so the balls would be smaller because less values will get to a noticeable amount.
+If you're like me this might confuse you because why doesn't everything go white when we do this, well because once you start multiplying by 0 it ofc cannot go up and will stay low. Actually one interesting thing to remember is that we actually start with the black dot in the middle so if we do not do this line to create our dots we get this:
+![WORKS](images/33.png)
+So yeah by the logic described above we would basically get black dots and very white backgrounds but because we invert it by dividing it by 1 before we saturate we get white dots.
+Ofcorse it is important to note that this value in this scenario comes from an earlier calculation we did where we took the distance from our featureUV where we basically took the random point declared in the cell and determined a distance from the outer edge of the cell but we'll go more in depth later. 
+
+Anyway now that we have that we have our perfectly clean voronoi basis!
+
+So first lets disect the code and I'll keep repeating it until I understand it exactly!
+```hlsl
+void DoVornoi_float(float2 UV, out float test)
+{
+    float scale = 7.0;
+
+    float2 gridUV = UV * scale;
+
+    float2 cell = floor(gridUV);
+
+    float2 featurePoint = hash2(cell);
+    float2 featureUV = (cell + featurePoint) / scale;
+
+    test = distance(UV, featureUV);
+}
+
+```
+
+So we scale up our UV and floor it down to create a 7x7 grid with each part of the grid identifyable with a coordinate thanks to floor!
+Now we determine our feature points and honestly here we go again because I have no clue how a float2 can hold multiple featurepoints and how my random has2 can just go through and determine a point for each....
+
+Alright so first off all we decided with floor that there are now clear coordinates? Remember that dot product??? Well we take the dot product of the coordinate and some random values and then run our randomness to determine a random 
+
+
+
 
 
 

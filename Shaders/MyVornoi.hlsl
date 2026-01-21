@@ -16,8 +16,6 @@ void DoVornoi_float(float2 UV, out float test)
     float2 featurePoint = hash2(cell);
     float2 featureUV = (cell + featurePoint) / scale;
 
-    float dist = distance(UV, featureUV);
-
-    test = saturate(1.0 - dist * 20.0);
+    test = distance(UV, featureUV);
 }
 
