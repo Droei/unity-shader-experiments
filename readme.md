@@ -393,10 +393,42 @@ void DoVornoi_float(float2 UV, out float test)
 So we scale up our UV and floor it down to create a 7x7 grid with each part of the grid identifyable with a coordinate thanks to floor!
 Now we determine our feature points and honestly here we go again because I have no clue how a float2 can hold multiple featurepoints and how my random has2 can just go through and determine a point for each....
 
-Alright so first off all we decided with floor that there are now clear coordinates? Remember that dot product??? Well we take the dot product of the coordinate and some random values and then run our randomness to determine a random 
+Alright so first off all we decided with floor that there are now clear coordinates? Remember that dot product??? Well we take the dot product of the coordinate and some random values and then run our randomness to determine a random point... But guess what because we sent in our coordinate and combine it through our dot product we can esure that this random point will always be placed.
+
+So why does this work just 1 value in and multiple values out. Well  its because shaders don't loop over cells, store points or built grids. We learnt about variables and stuff in object oriented programming but this is NOT that. Instead in shader math each pixel asks "what cell am I in? during the floor process each pixel get a cell assigned so when we do hash2 the function wil run for each pixel and give it each its featurepoint, because each cell has the same value it only looks like only one point was declared but actually it was declared for each pixel but as each pixel has a cell it gives the illusion as if the featurePoint is calculate per cell!
+
+So we have our featurepoints in our cells now we create a new UV for each cell with the the current cell and the featurepoint and decrease it back with the scale. So what does this mean in detail?
+Well first of all lets visualise it huh? what is happening here?
+![WORKS](images/34.png)
 
 
+So what is happening? Well we are going from black to white as we move more right and up, why is that? Well right now we just assign all values in a pixel a value. Before we go into that part lets first explain what determines this value! Its ofcorse the `hasth(cell)` we are assigning a random value to each pixel. each pixel has a coordinate like [2,5] for example so meaning that the float2 will land in the coordinate [2,5] so a potential result could be [2.55,5,56]
+
+Now lets talk about this line that actually 
+`float2 featureUV = (cell + featurePoint) / scale;`
+Here is an example of the output without it, yeah just random colored squares with no pattern, why is that?
+![WORKS](images/35.png)
+Well without the line above the cells each get assigned a value that is randomly picked but the value isn't actually gonna be high automatically based on its coordinate. NO!
+The magic happens in that line! So what does this line do to the colors!
+We have: cell / scale and cell / featurePoint
+Cell / scale determines how high the result is, higher scale means higher result.
+FeaturePoint / scale determines the random worth of it, each feature point has a random value so that's why even though its consistently whiter it isn't one straight line, this determines still randomness.
 
 
+Now we combine those 2 values after dividing them both by scale and ofcorse the higher it goes the whiter it becomes because cell determines whiteness and featurepoint randomness!!
+Ooooh boy rough one but now we just have one more move to go and that's to get our voronoi like gradient and we ofcorse do that with our distance
 
+And ofcorse distance just gives the distance between points. Basically we go back to our UV and go through every pixel on the uv and then ask "Hey how far am I from this exact point" that other point is a location on another uv but ofcorse with the same numbers lets say.
+
+So its soo hard to figure it all out so lets do this! First of all its important to note and not forget: When a GPU runs this code each pixel runs this function so for every pixel in the uv this code is ran independently! Remembering that already helps us forward a lot! So each run has a single uv, no knowledge of any neighbors or previous pixels, just raw and unsencored math. 
+
+So the crazy plot twist is featurepoint the result from hash2 is always 0 to 1 altough the grid coordinates go higher, the point where this gets reverted back is once again here: `float2 featureUV = (cell + featurePoint) / scale;` at this point the value goes from 0 - 7 back to 0 to 1 but the feature point will basically be at the same position, we are just normalising and randomising its location using cell als the location and featurepoint as the random point in that location! 
+
+So when we are doing the distance we are once again comparing an uv from  0 to 1 to another one of 0 to 1 . Ofcorse still confusing why am I getting this weird output from featureUV and what kind of black magic makes it so I can get any distance out of it? 
+![WORKS](images/34.png)
+Well first of all FeatureUV's distance was never meat to be outputted so it makes sense that it does not show anything logical that we could use for distance. So to make it somewhat logical featureUV has one value per coordinate which is the featurepoint so when we measure distance each pixel in UV will check its distance to the featurepoint. So how does each uv pixel know what feature point it needs to look at? Well to put it simply, it checks which feature point is closed to it. So why does our UV randomly get a grid? Becuase HUH? 
+
+So first of all our pixels never consider the feature points of other cells, it only checks for the feature points inside its cell. The weird part is that UV has no input of cells so it is all up to FeatureUV to create these cells! So we are going back to the part where each pixel calculates its own stuff and runs the function on its own this is where its important! Each pixel only knows about its own feature point in its own grid, because that's what is defined in hash2, there is no other feature point for this uv literally this 1 pixel is being ran and it gets 1 feature point and that's the one it looks at and gets the distance to. There are no 2 to choose from there literally is only 1 feature point being generated per pixel and depending on where that pixel appears is in which grid area it'll spawn.
+
+OMFGH THAT WAS ROUGH BUT I GET IT NOW, I need a fckn break now!
 
