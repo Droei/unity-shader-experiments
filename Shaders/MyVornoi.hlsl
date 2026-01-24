@@ -9,14 +9,30 @@ void DoVornoi_float(float2 UV, out float test)
 {
     float scale = 7.0;
 
-    float2 gridUV = UV * scale;
+    float2 cell = floor(UV * scale);
 
-    float2 cell = floor(gridUV);
+    float minDist = 1e9;
+    float2 winnerCell = 0;
 
-    float2 featurePoint = hash2(cell);
-    float2 featureUV = (cell + featurePoint) / scale;
-    
-    test = distance(UV, featureUV);
+    for (int y = -1; y <= 1; y++)
+    {
+        for (int x = -1; x <= 1; x++)
+        {
+            float2 neighborCell = cell + float2(x, y);
 
+            float2 featurePoint = hash2(neighborCell);
+            float2 featureUV = (neighborCell + featurePoint) / scale;
+
+            float d = distance(UV, featureUV);
+
+            if (d < minDist)
+            {
+                minDist = d;
+                winnerCell = neighborCell;
+            }
+        }
+    }
+
+    test = float3(hash2(winnerCell), 0.0);
 }
 

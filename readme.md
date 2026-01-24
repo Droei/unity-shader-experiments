@@ -432,3 +432,39 @@ So first of all our pixels never consider the feature points of other cells, it 
 
 OMFGH THAT WAS ROUGH BUT I GET IT NOW, I need a fckn break now!
 
+aaalllrriiigght now we got the basic understanding of setting random feature points in grids but now! When we do voronoi we need each pixel to see 9 different feature points and determine what its closed to... Ooh boy sounds like a challenge but having all the knowledge I've accumulated by now its way more sensible to me than it ever was!
+
+Now lets get that done! So voronoi requires the distance of 9 different cells, the cell in the middle and the 8 other ones around it!
+As we went over earlier each pixel will look for the distances to each feature point and teremines which one is the closest, it'll take the distance of the closest!
+So how do we make that in code:
+
+Well ofcorse with some magical loops! So here are the different voronoi patterns with the bottom one being what we'll be working towards!
+![WORKS](images/36.png)
+
+Alright so we can already take the distance from a single feature point for each pixel in its grid. Now we need to have all the grids around our pixel and collect the feature points and find the shortest distance.
+Honestly compared to all the challenge we've already had this is nothing!
+
+So first we create a variable named minDist and set it to a very high number in this case I just went 1e9 (honestly could be way lower but hey ez) `float minDist = 1e9;`.
+Now we loop through each x and y position with 2 loops; ofcorse looping over every combination:
+```hlsl
+    for (int y = -1; y <= 1; y++)
+    {
+        for (int x = -1; x <= 1; x++)
+        {
+```
+
+If we have a pixel at position [5.3, 8.1] this loop will run the lines we'll discuss soon for all these grids
+
+```
+[4,9][5,9][6,9]
+[4,8][5,8][6,8]
+[4,7][5,7][6,7]
+```
+
+First we determine the cell we are working with: `float2 neighborCell = cell + float2(x, y);`, simple math the center cell is [5,8] so just get the other cells 1 by one based on the moment in the loop.
+
+Then we run the creation of the featureUV 
+```hlsl
+	float2 featurePoint = hash2(neighborCell);
+	float2 featureUV = (neighborCell + featurePoint) / scale;
+```
