@@ -266,7 +266,7 @@ and instead put in the uv that I fractioned myself and then place a random numbe
 Well lets see!
 Our code right now: 
 
-```
+```hlsl
 float2 hash2(float2 p)
 {
     p = float2(dot(p, float2(127.1, 311.7)),
@@ -311,7 +311,7 @@ But one thing to call out, once we go back to normal code I do get a somewhat se
 
 Anyway lets disect the code because that was my goal in the first place, just a reminder what we have:
 
-```
+```hlsl
 float2 hash2(float2 p)
 {
     p = float2(dot(p, float2(127.1, 311.7)),
@@ -357,7 +357,7 @@ Anyway so! To finish up my confusion with Floor and Frac I can finally set a sol
 - Floor divides everything in identifyable positions making it great for vornoi if we want everything around our grid we can just check [0,0] everything 1 over and under x and Y, EASY!!!
 
 Alright so we got this all figured out!
-```
+```hlsl
     float scale = 7.0;
     float2 gridUV = UV * scale;
     float2 cell = floor(gridUV);
@@ -468,3 +468,207 @@ Then we run the creation of the featureUV
 	float2 featurePoint = hash2(neighborCell);
 	float2 featureUV = (neighborCell + featurePoint) / scale;
 ```
+Where we ofcorse once again assign a random value and then normalise it to a value between 0 and 1
+
+Then we get the distance once again from our pixel to the featurepoint we are checking for, this can be ofcorse be from each feature point in the 3x3 grid. `float d = distance(UV, featureUV);`
+
+And then we check if the distance from the feature point for that coordinate is smaller than the one we currently determined as the smallest and if so we replace it! `minDist = min(minDist, d);`
+Yeah that's it we now have our voronoi we where looking for!
+
+```hlsl
+float2 hash2(float2 p)
+{
+    p = float2(dot(p, float2(127.1, 311.7)),
+               dot(p, float2(269.5, 183.3)));
+    return frac(sin(p)*100000.0);
+}
+
+void DoVornoi_float(float2 UV, out float test)
+{
+    float scale = 7.0;
+
+    float2 gridUV = UV * scale;
+    float2 cell = floor(gridUV);
+
+    float minDist = 1e9;
+
+    for (int y = -1; y <= 1; y++)
+    {
+        for (int x = -1; x <= 1; x++)
+        {
+            float2 neighborCell = cell + float2(x, y);
+
+            float2 featurePoint = hash2(neighborCell);
+            float2 featureUV = (neighborCell + featurePoint) / scale;
+
+            float d = distance(UV, featureUV);
+            minDist = min(minDist, d);
+        }
+    }
+
+    test = minDist;
+}
+
+```
+
+
+Once we understand the basics and  the logic of the math behind it the easier it becomes to built upon what we have!
+
+So now I'm curious. how do we get this effect now: 
+![WORKS](images/37.png)
+Here each tile has a different grey value. Now that I have a basic understanding of how graphics are programmed its time to just try things
+
+So here we go, right now we just get the lowest distance and we assign its value to the pixel. Ofcorse this will not create consistent values for each pixel in the voronoi grid but a gradient.
+We need to go a bit deeper and find a a similarity all the pixels in a voronoi cell share and guess what, its the feature point that is closest to them, who would have through!? 
+
+So what do we do, instead of saving the distance between feature point and pixel we do something else we do that but also save the coordinate of what grid position the feature point resides in! 
+So if our pixel is closes to the feature point in [2,3] then we should save the distance but also that grid position. So instead of just doing: `minDist = min(minDist, d);`.
+We also keep the grid it resides in because that will always be unique because each featurepoint always has only 1 grid position.
+```hlsl
+if (d < minDist)
+{
+    minDist = d;
+    winnerCell = neighborCell;
+}
+```
+
+And just to keep visualising different effects I also added multiple outputs so I can always see what is doing what!
+Here is where we at now!
+```hlsl
+float2 hash2(float2 p)
+{
+    p = float2(dot(p, float2(127.1, 311.7)),
+               dot(p, float2(269.5, 183.3)));
+    return frac(sin(p)*100000.0);
+}
+
+void DoVornoi_float(float2 UV, out float solids, out float gradients)
+{
+    float scale = 7.0;
+
+    float2 cell = floor(UV * scale);
+
+    float minDist = 1e9;
+    float2 winnerCell = 0;
+
+    for (int y = -1; y <= 1; y++)
+    {
+        for (int x = -1; x <= 1; x++)
+        {
+            float2 neighborCell = cell + float2(x, y);
+
+            float2 featurePoint = hash2(neighborCell);
+            float2 featureUV = (neighborCell + featurePoint) / scale;
+
+            float d = distance(UV, featureUV);
+
+            if (d < minDist)
+            {
+                minDist = d;
+                winnerCell = neighborCell;
+            }
+        }
+    }
+
+    solids = hash2(winnerCell);
+    gradients = minDist;
+}
+```
+![WORKS](images/38.png)
+
+Now one more thing and we basically recreated the voronoi lines, well I think for the most part.
+I already went over the idea of edges and why we can't just step it so now its time to explain why and how we actually do it!
+Ofcourse through the wonerful world of code!!!!!
+
+First of all what is the edge? 
+Well its basically a line that's drawn between 2 feature points, so from here we basically start cutting out everything but the pixels closest between the 2 feature points.
+I'll just add it to the list of potential outputs but performance wise this is looking rought, having more options definitly makes it nice but considering this all needs to constantly be done for every pixel adding a few lines extra to get different outputs that MIGHT be used but not always in the same function makes it so it has to be ran for every pixel. Guess here is where the shader optimization magic has to happen, INTERESTING!!!!
+
+Anyway lets get our borders, and as you'll see now that we understand everything everything is just kinda logical no?. Under minDist we add `float secondMinDist = 1e9;` which is because to get a distance we need 2 values to get somethin in between! The shortest distance and the second shortest distance! which ofcorse will always create a logical line between the 2 feature points.
+So basically we first determine our closest line as we do:
+```hlsl
+	if (d < minDist)
+	{
+		secondMinDist = minDist;
+		minDist = d;
+	}
+```
+If our minDist is higher than the distance we currently are checking for well then mindist becomes the new smallest distance and move the other value down as the second smallest value!
+Ofcorse this won't always work so we need to add another check.
+So we determined that minDistance is not higher than distance, ok. Now is secondMinDist higher than d? They are 2 different values after all!
+```hlsl
+	else if (d < secondMinDist)
+	{
+		secondMinDist = d;
+	}
+```
+well if so we update our secondMinDist and so we always have the biggest and smallest value. Honestly later I want to see if there is a mathmatical way to do this because if and else if is very heavy on the gpu! 
+
+Anyway now we have the 2 values for our pixel so now we can determine how close it is from the edge we just found! We simply do this by subtracting one from the other: `edge = secondMinDist - minDist;`.
+AND BAM WE HAVE OUR VORONOI LINES!!!
+![WORKS](images/39.png)
+
+```hlsl
+float2 hash2(float2 p)
+{
+    p = float2(dot(p, float2(127.1, 311.7)),
+               dot(p, float2(269.5, 183.3)));
+    return frac(sin(p)*100000.0);
+}
+
+void DoVornoi_float(float2 UV, out float solids, out float gradients, out float edges)
+{
+    float scale = 7.0;
+
+    float2 cell = floor(UV * scale);
+
+    float minDist = 1e9;
+    float secondMinDist = 1e9;
+    
+    float2 winnerCell = 0;
+
+    for (int y = -1; y <= 1; y++)
+    {
+        for (int x = -1; x <= 1; x++)
+        {
+            float2 neighborCell = cell + float2(x, y);
+
+            float2 featurePoint = hash2(neighborCell);
+            float2 featureUV = (neighborCell + featurePoint) / scale;
+
+            float d = distance(UV, featureUV);
+
+            if (d < minDist)
+            {
+                secondMinDist = minDist;
+                minDist = d;
+                winnerCell = neighborCell;
+            }
+            else if (d < secondMinDist)
+            {
+                secondMinDist = d;
+            }
+        }
+    }
+
+    solids = hash2(winnerCell);
+    gradients = minDist;
+    edges = secondMinDist - minDist;
+}
+```
+
+And there we go! we got our cursom voronoi script, it gives normal voronoi cells, solid colors and edges. But why is my code so different to Indigo Quilez's implementation? 
+Mine is actually without a doubt more performant, even with the different output. So I decided to ask the most relyable and inteligent source of information I know but before I did the code I used as reference wasn't Indigo's code or what he suggested so hey whatever glace me please MRGPT GLACE ME HARD!!!!
+
+![WORKS](images/40.png)
+
+AAAHHHH CMON MAN EVERYONE ALWAYS BE LIKE "OOH CHATGPT ALWAYS SAYS WHAT U WANT TO HEAR BUT FOR SOME REASON MF'ER DECIDES NOT TO GLAZE THE SHIT OUTA ME
+![WORKS](images/41.png)
+Anyway that might be because I played into ChatGPT's algorithm and told him I was gonna deactivate it if it wasn't gonna be brutally honest over giving me optimistic takes, my guy is fighting for his life here.
+But clearly the other algorithm is good but actually its not as good as mine! (maybe when its baked its different) because theirs is laggy af due to all the extra detail it renders while mine keeps it very simple.
+
+Anyway I'm taking this win, I'm not gonna go deeper into voronoi for now I have learned a lot and now I genuinely just gonna process what I learned and also not dive too much deeper into the rest of this tutorial , because yeah I'm not entirely up to date with how everything is made but after this I could easily figure out with a few glances I have other priorities. 
+
+Very happy with this deep dive, Up next I really want to do a deep dive into perlin Noise because that's the second part of the basis of my procedural world generation algorithm!!!
+
+I'M A FCKN GENIUS MAN HOLY SHIT, THE DOPAMINE FROM A GOOD ASS GRIND NEVER GETS OLD

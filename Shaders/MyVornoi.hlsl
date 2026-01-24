@@ -5,13 +5,15 @@ float2 hash2(float2 p)
     return frac(sin(p)*100000.0);
 }
 
-void DoVornoi_float(float2 UV, out float test)
+void DoVornoi_float(float2 UV, out float solids, out float gradients, out float edges)
 {
     float scale = 7.0;
 
     float2 cell = floor(UV * scale);
 
     float minDist = 1e9;
+    float secondMinDist = 1e9;
+    
     float2 winnerCell = 0;
 
     for (int y = -1; y <= 1; y++)
@@ -27,12 +29,19 @@ void DoVornoi_float(float2 UV, out float test)
 
             if (d < minDist)
             {
+                secondMinDist = minDist;
                 minDist = d;
                 winnerCell = neighborCell;
+            }
+            else if (d < secondMinDist)
+            {
+                secondMinDist = d;
             }
         }
     }
 
-    test = float3(hash2(winnerCell), 0.0);
+    solids = hash2(winnerCell);
+    gradients = minDist;
+    edges = secondMinDist - minDist;
 }
 
