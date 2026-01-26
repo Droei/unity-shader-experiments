@@ -672,3 +672,8 @@ Anyway I'm taking this win, I'm not gonna go deeper into voronoi for now I have 
 Very happy with this deep dive, Up next I really want to do a deep dive into perlin Noise because that's the second part of the basis of my procedural world generation algorithm!!!
 
 I'M A FCKN GENIUS MAN HOLY SHIT, THE DOPAMINE FROM A GOOD ASS GRIND NEVER GETS OLD
+
+One last note I read at Indigo Quilez's page just to remind for the future:
+> The problem is that substracting the distance to the closest point from the distance to the second closest point, or what people know as F2-F1 Voronoi, it's pretty close to a cell border generator. Indeed, the borders of the cells happen at locations where these two distances are equal (equidistant points from the two closest neighbors), so the function F2-F1 takes value 0.0 exactly at the borders of the cells, which is super usefull. So, i'd say it's pretty normal that one is tempted to simply smoothstep F2-F1 between two small numbers and call that a "cell edge". That sort of works, but not completelly. F2-F1 is not a distance really, as it expands and contracts depending on the distance between the the two cell points in each side of the edge, which can change wildly over the domain of the voronoi. Anyway, for reference, the implementation would be like this:
+
+and this is why my method isn't always as smart!
