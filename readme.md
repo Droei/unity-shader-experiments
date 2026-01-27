@@ -318,6 +318,103 @@ Lets disect for the grind! But after that we will do it the right way!
 
 We start with local which is ofcorse our position within the grid.
 First we hit em with the `local * local`, the result of this is that it will decrease lower values and increase higher values. In a graph this means ofcorse that at lower values like 0.01 it grows very slow while very fast at .9 for example! Makes sense right because .01 \* 0.01 = an increment of 0.0001 while .9 \* .9  increments by 0.81 which explains how we make increments go higher the further we go to the left where our normalised x value goes higher.
+then we multiply our ease in with out ease out ofcorse.... So what do we have for ease out? `(3.0 - 2.0 * local)` 
+
+So to really illustrate this lets take it with and without because honestly it might not make sense at first.
+With that line
+[16.png]
+Without:
+[17.png]
+As you can see there's a lot of sharp edges aroundour squares now and you can clearly identify them. 
+That's where `(3.0 - 2.0 * local)` comes in. Just so we are on one line what this does.
+- 3 - 2 \* 0  = 3 - 0 = 3
+- 3 - 2 \* .25  = 3 - 0.5 = 2.5
+- 3 - 2 \* .5 = 3 - 1 = 2
+- 3 - 2 \* .75 = 3 - 1.5 = 1.5
+- 3 - 2 \* 1  = 3 - 2 = 1
+
+So what does this mean? Well lets now multiply those values with our `local * local`
+- 0 \* 3 = 0
+- .0625 \* 2.5 = 0.15625
+- .25 \* 2 = .5
+- .5625 \* 1.5 =  0.84375
+- 1 \* 1 = 1
+
+As you can see, the local value is being adjusted to smoothened. Best illustrated by when local = .25 and .75, you can clearly see how it goes .1 lower and with .75 going .1 higher already showing how its consistently smoothening out towards the end speeding up around .5 and slowing down towards the end! No fancy functions just raw math and logic!
+We can ofcorse ease it by increasing the amount of eases, a real brutal example is this: `float2 f = local * local * local * (local * (local * 6 - 15) + 10);` I know but lets get back to making perlin noise now because I sweated way to long on understanding this one!
+But ofcorse so you remember!!! We will use something similar later!!!!!
+
+Alright lets introduce some new values and see what they do:
+```hlsl
+void PerlinNoise2D_float(float2 UV, out float Noise)
+{
+    float2 cell = floor(UV);
+    float2 local = frac(UV);
+
+    float v0 = PerlinHash2(cell).x;
+    float v1 = PerlinHash2(cell + float2(1, 0)).x;
+    float v2 = PerlinHash2(cell + float2(0, 1)).x;
+    float v3 = PerlinHash2(cell + float2(1, 1)).x;
+
+    float2 d00 = local - float2(0, 0);
+    float2 d10 = local - float2(1, 0);
+    float2 d01 = local - float2(0, 1);
+    float2 d11 = local - float2(1, 1);
+
+    float v00 = dot(v0, d00);
+    float v10 = dot(v1, d10);
+    float v01 = dot(v2, d01);
+    float v11 = dot(v3, d11);
+
+    float ix0 = lerp(v00, v10, local.x);
+    float ix1 = lerp(v01, v11, local.x);
+
+    Noise = lerp(ix0, ix1, local.y);
+}
+```
+[18.png]
+
+And honestly I really wanna get them some new names so shits clearer cuz holy shit tf is this.
+So I always am very religious over naming. I feel like if you can't figure write what a function does in it's name ur probably writing a shitty function, and now I'll apply this logic to the code. It'll be way easier to understand what each line does when its actually written in something that describes it's functionality in the current code (I will also change this accordingly as new code comes in, we're almost there tho!)
+
+[19.jpg]
+
+```hlsl
+float2 PerlinHash2(float2 p)
+{
+    p = float2(
+        dot(p, float2(127.1, 311.7)),
+        dot(p, float2(269.5, 183.3))
+    );
+    return frac(sin(p) * 43758.5453);
+}
+
+void PerlinNoise2D_float(float2 UV, out float Noise)
+{
+    float2 cell = floor(UV);
+    float2 local = frac(UV);
+
+    float CellValue00 = PerlinHash2(cell).x;
+    float CellValue10 = PerlinHash2(cell + float2(1, 0)).x;
+    float CellValue01 = PerlinHash2(cell + float2(0, 1)).x;
+    float CellValue11 = PerlinHash2(cell + float2(1, 1)).x;
+
+    float2 PixelDistanceFrom00Corner = local - float2(0, 0);
+    float2 PixelDistanceFrom10Corner = local - float2(1, 0);
+    float2 PixelDistanceFrom01Corner = local - float2(0, 1);
+    float2 PixelDistanceFrom11Corner = local - float2(1, 1);
+
+    float ProcessedValueForCorner00FromPixel = dot(CellValue00, PixelDistanceFrom00Corner);
+    float ProcessedValueForCorner10FromPixel = dot(CellValue10, PixelDistanceFrom10Corner);
+    float ProcessedValueForCorner01FromPixel = dot(CellValue01, PixelDistanceFrom01Corner);
+    float ProcessedValueForCorner11FromPixel = dot(CellValue11, PixelDistanceFrom11Corner);
+
+    float LeftToRightGradientAtPixelCell = lerp(ProcessedValueForCorner00FromPixel, ProcessedValueForCorner10FromPixel, local.x);
+    float LeftToRightGradientAbovePixelCell = lerp(ProcessedValueForCorner01FromPixel, ProcessedValueForCorner11FromPixel, local.x);
+
+    Noise = lerp(LeftToRightGradientAtPixelCell, LeftToRightGradientAbovePixelCell, local.y);
+}
+```
 
 
 More sources to dive into!
